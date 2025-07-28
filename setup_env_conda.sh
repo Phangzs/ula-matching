@@ -16,7 +16,17 @@ fi
 
 # Initialise Conda for the current shell so that conda activate works
 # shellcheck source=/dev/null
-source "$(conda info --base)/etc/profile.d/conda.sh"
+# Initialise Conda for this *non-interactive* shell
+if conda --version >/dev/null 2>&1; then
+    # Conda ≥4.4 provides the shell hook
+    eval "$(conda shell.bash hook)" || {
+        echo "Could not initialise Conda – install Miniconda or update Conda."
+        return 1 2>/dev/null || exit 1
+    }
+else
+    echo "Conda not found in PATH."
+    return 1 2>/dev/null || exit 1
+fi
 
 ## 2. Create or update the environment
 if conda env list | awk '{print $1}' | grep -Fxq "$ENV_NAME"; then

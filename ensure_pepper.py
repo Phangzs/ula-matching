@@ -3,6 +3,9 @@ import os, secrets, stat, pathlib
 _ENV_KEY = "STUDENT_PEPPER"
 _EXPECTED_LEN = 64
 
+from dotenv import load_dotenv 
+load_dotenv()
+
 def _is_valid(hexstr: str | None) -> bool:
     return bool(hexstr) and len(hexstr) == _EXPECTED_LEN and all(c in "0123456789abcdef" for c in hexstr)
 

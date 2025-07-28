@@ -5,12 +5,6 @@ PEPPER_HEX = ensure_pepper()
 PEPPER = bytes.fromhex(PEPPER_HEX)
 
 
-try:
-    from dotenv import load_dotenv 
-    load_dotenv()
-except ModuleNotFoundError:
-    pass
-
 _HEX_PEPPER = os.getenv("STUDENT_PEPPER")
 if not _HEX_PEPPER or len(_HEX_PEPPER) != 64:
     raise RuntimeError(

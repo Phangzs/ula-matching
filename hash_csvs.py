@@ -1,8 +1,5 @@
 import csv, os, pathlib, tempfile
-from ensure_pepper import ensure_pepper
 from hash_ids import hash_student_id
-
-ensure_pepper() # Guarantee secret is loaded
 
 
 def hash_column_in_csv(

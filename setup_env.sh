@@ -9,10 +9,10 @@ ENV_NAME=$(grep -m1 '^name:' "$ENV_FILE" | cut -d' ' -f2)
 SOLVE_FLAGS=(--channel-priority flexible)
 
 
-# 1. Ensure Micromamba is available – bootstrap if needed
+# 1. Ensure Micromamba is available
 if ! command -v micromamba >/dev/null 2>&1; then
     echo "    Micromamba not found – bootstrapping to ~/.local/bin..."
-    ARCH=$(uname -m)      # e.g. x86_64, aarch64
+    ARCH=$(uname -m)
     curl -L "https://micro.mamba.pm/api/micromamba/${ARCH}/latest" \
         | tar -xj -C "$HOME/.local/bin" bin/micromamba  || {
             echo "    Download failed – please install micromamba manually."

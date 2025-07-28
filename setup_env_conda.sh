@@ -16,7 +16,6 @@ fi
 
 # Initialise Conda for the current shell so that conda activate works
 # shellcheck source=/dev/null
-# Initialise Conda for this *non-interactive* shell
 if conda --version >/dev/null 2>&1; then
     # Conda ≥4.4 provides the shell hook
     eval "$(conda shell.bash hook)" || {

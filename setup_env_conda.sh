@@ -34,7 +34,7 @@ if conda env list | awk '{print $1}' | grep -Fxq "$ENV_NAME"; then
     conda env update -n "$ENV_NAME" -f "$ENV_FILE" --prune
 else
     echo "    Creating environment: $ENV_NAME"
-    conda env create -f "$ENV_FILE"
+    conda env create --file="$ENV_FILE"
 fi
 
 echo "    Environment ready."
@@ -57,3 +57,5 @@ if [[ "$ANSWER" =~ ^[Yy]$ ]]; then
 else
     echo "    No pepper provided – skipping .env creation."
 fi
+
+echo "Run the following command to activate the environment: conda activate $ENV_NAME"

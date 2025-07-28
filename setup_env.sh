@@ -9,11 +9,16 @@ ENV_NAME=$(grep -m1 '^name:' "$ENV_FILE" | cut -d' ' -f2)
 SOLVE_FLAGS=(--channel-priority flexible)
 
 
-## 1. Ensure Micromamba is available
+# 1. Ensure Micromamba is available – bootstrap if needed
 if ! command -v micromamba >/dev/null 2>&1; then
-    echo "    Micromamba not found in PATH."
-    echo "    Install it first: https://mamba.readthedocs.io/en/latest/installation.html#micromamba"
-    return 1 2>/dev/null || exit 1
+    echo "    Micromamba not found – bootstrapping to ~/.local/bin..."
+    ARCH=$(uname -m)      # e.g. x86_64, aarch64
+    curl -L "https://micro.mamba.pm/api/micromamba/${ARCH}/latest" \
+        | tar -xj -C "$HOME/.local/bin" bin/micromamba  || {
+            echo "    Download failed – please install micromamba manually."
+            return 1 2>/dev/null || exit 1
+        }
+    export PATH="$HOME/.local/bin:$PATH"
 fi
 
 # Initialise Micromamba for the current shell so that `micromamba activate` works

@@ -1,39 +1,45 @@
 #!/usr/bin/env bash
-# setup_env.sh – create / update Micromamba env, activate it,
+# setup_env.sh – create / update Conda env, activate it,
 #                optionally store a 64‑char hex “pepper” in .env
 
-set -euo pipefail   # Debugging
+set -euo pipefail # Debugging
 
 ENV_FILE="environment.yml"
 ENV_NAME=$(grep -m1 '^name:' "$ENV_FILE" | cut -d' ' -f2)
-SOLVE_FLAGS=(--channel-priority flexible)
 
-
-# 1. Ensure Micromamba is available
-if ! command -v micromamba >/dev/null 2>&1; then
-    echo "    Micromamba not found – bootstrapping to ~/.local/bin..."
-    ARCH=$(uname -m)
-    curl -L "https://micro.mamba.pm/api/micromamba/${ARCH}/latest" \
-        | tar -xj -C "$HOME/.local/bin" bin/micromamba  || {
-            echo "    Download failed – please install micromamba manually."
-            return 1 2>/dev/null || exit 1
-        }
-    export PATH="$HOME/.local/bin:$PATH"
+## 1. Ensure Conda is available
+if ! command -v conda >/dev/null 2>&1; then
+    echo "    Conda not found in PATH."
+    echo "    Install it first: https://docs.conda.io/en/latest/miniconda.html"
+    return 1 2>/dev/null || exit 1
 fi
 
-# Initialise Micromamba for the current shell so that `micromamba activate` works
-eval "$(micromamba shell hook --shell bash)"
+# Initialise Conda for the current shell so that conda activate works
+# shellcheck source=/dev/null
+if conda --version >/dev/null 2>&1; then
+    # Conda ≥4.4 provides the shell hook
+    eval "$(conda shell.bash hook)" || {
+        echo "Could not initialize Conda – install Miniconda or update Conda."
+        return 1 2>/dev/null || exit 1
+    }
+else
+    echo "Conda not found in PATH."
+    return 1 2>/dev/null || exit 1
+fi
 
 ## 2. Create or update the environment
-if micromamba env list | awk '{print $1}' | grep -Fxq "$ENV_NAME"; then
+if conda env list | awk '{print $1}' | grep -Fxq "$ENV_NAME"; then
     echo "    Updating existing environment: $ENV_NAME"
-    micromamba env update -n "$ENV_NAME" -f "$ENV_FILE" --prune
+    conda env update -n "$ENV_NAME" -f "$ENV_FILE" --prune
 else
     echo "    Creating environment: $ENV_NAME"
-    micromamba env create -f "$ENV_FILE" "${SOLVE_FLAGS[@]}"
+    conda env create --file="$ENV_FILE"
 fi
 
 echo "    Environment ready."
+
+conda activate "$ENV_NAME"
+echo "    Activated: $ENV_NAME"
 
 ## 3. Optional 64‑character pepper
 read -r -p "Do you have a custom 64‑character hex pepper? [y/N] " ANSWER
@@ -51,5 +57,4 @@ else
     echo "    No pepper provided – skipping .env creation."
 fi
 
-
-echo "Run the following command to activate the environment: micromamba activate $ENV_NAME"
+echo "Run the following command to activate the environment: conda activate $ENV_NAME"

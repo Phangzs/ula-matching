@@ -110,6 +110,7 @@ dependencies:
   - mistune=3.1.2=py312hca03da5_0
   - multidict=6.1.0=py312h80987f9_0
   - mysql=8.4.0=h065ec36_2
+  - natsort=8.4.0=py312hca03da5_0
   - nb_conda_kernels=2.5.2=py312hca03da5_1
   - nbclient=0.10.2=py312hca03da5_0
   - nbconvert=7.16.6=py312hca03da5_0

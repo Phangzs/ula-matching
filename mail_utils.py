@@ -27,6 +27,10 @@ import random
 # For interface
 from tqdm import tqdm
 
+# For reading files
+import csv, re
+import pandas as pd
+
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
 def creds():
@@ -102,6 +106,7 @@ def render_email(template_name: str, *, custom_dict=None) -> tuple[str, str, str
         for line in file: print(line)
     
     subject = env.get_template(f"{template_name}.subject.j2", "templates").render(data)
+
     try:
         html = markdown2.markdown(env.get_template(f"{template_name}.body.html.j2", "templates").render(data), extras={'breaks': {'on_newline': True}})
     except TemplateNotFound:
@@ -114,13 +119,14 @@ def _email_confirmation(subject: str, html_body: str, template: str, *, test_ema
     else: 
         print(f"A test email will be sent to {test_email}.")
 
-        customized_html_body = random.choice(fill_from_csv(html_body, template))[0]
-        send_email(test_email, subject, customized_html_body)
+        customized_html_body, _, attachments = random.choice(fill_from_csv(html_body, template))
+        send_email(test_email, subject, customized_html_body, attachments)
         return False
     
     # print("Please confirm the following are correct:", end="\n\n\n")
     print()
 
+    email_tuples = list(pd.read_csv(f"templates/{template}.csv", usecols=[0, 1]).itertuples(index=False, name=None))
     print("----------NAME AND EMAILS----------")
     print(f"{"NAME":20}, EMAIL")
     for name, email in email_tuples:
@@ -153,13 +159,15 @@ def _email_confirmation(subject: str, html_body: str, template: str, *, test_ema
 #     for key in dict:
 #         body.replace(f"[[{key}]]", custom_dict[key])
 
-import csv, re
+
 
 # Matches {{KEY}} and captures KEY
 # RX = re.compile(r"\[\[([A-Za-z0-9_]+)\]\]") # if the next doesn't work
 RX = re.compile(r"\[\[([^]]+)\]\]") # Allows spaces/puntuation in brackets
 
-def fill_from_csv(template: str, csv_path: str, *, missing="leave") -> list[str]:
+from ast import literal_eval
+
+def fill_from_csv(template: str, csv_path: str, *, missing="leave") -> list[str, str, list[str]]:
     """
     template.txt uses {{HeaderName}} placeholders.
     data.csv has headers matching those names.
@@ -181,9 +189,28 @@ def fill_from_csv(template: str, csv_path: str, *, missing="leave") -> list[str]
                 if missing == "blank":
                     return ""                    # remove it
                 return str(missing)              # custom fallback text
+            
+            cell = (row.get("attachments") or "").strip()
+            attachments_list: list[str]
+            if cell.startswith("["):  # try JSON first, then Python literal
+                try:
+                    parsed = json.loads(cell)
+                    if isinstance(parsed, (list, tuple)):
+                        attachments_list = [str(p).strip() for p in parsed if str(p).strip()]
+                    else:
+                        attachments_list = []
+                except Exception:
+                    try:
+                        parsed = literal_eval(cell)
+                        attachments_list = [str(p).strip() for p in parsed if str(p).strip()] if isinstance(parsed, (list, tuple)) else []
+                    except Exception:
+                        attachments_list = []
+            else:
+                # fallback: split on common delimiters
+                attachments_list = [p.strip() for p in re.split(r"[;,|]", cell) if p.strip()]
 
-            results.append((RX.sub(repl, template), row['email'].strip()))
-            print(row['email'])
+            # attachments_list = [p.strip() for p in re.split(r"[;,|]", (row.get("attachments") or "")) if p.strip()]
+            results.append((RX.sub(repl, template), row['email'].strip(), attachments_list))
 
     return results
 
@@ -194,6 +221,9 @@ def send_emails(template: str) -> None:
 
     subject, html_body = render_email(template)
 
+    email_tuples = fill_from_csv(html_body, template)
+    # print(email_tuples)
+
     test_email = input("If you would like to send a test email, enter your email. Otherwise, press return:\n")
     test_email = test_email if "@" in test_email else None
     if _email_confirmation(subject, html_body, template, test_email=test_email): print("Confirmation Complete: Sending emails...")
@@ -202,10 +232,9 @@ def send_emails(template: str) -> None:
         return
 
     
-    email_tuples = fill_from_csv(html_body, f"templates/{template}.csv")
 
 
-    for body, email in tqdm(email_tuples):
-        send_email(email, subject, body)
+    for body, email, attachments in tqdm(email_tuples):
+        send_email(email, subject, body, attachments)
 
-    print("All emails sent.")
+    print("\nAll emails sent.")
